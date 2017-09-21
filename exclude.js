@@ -9,7 +9,7 @@ const parse = _ => _.split(/[\r\n]+/)
 
 const includes = parse(`
 C:/Apps/MPC
-// C:/red
+C:/red
 `);
 
 module.exports = item => {

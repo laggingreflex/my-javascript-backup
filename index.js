@@ -9,7 +9,15 @@ const _ = require('./utils');
 const exclude = require('./exclude');
 
 const root = 'C:/';
-const MAX_CONCURRENT = 1000;
+const MAX_CONCURRENT = 1;
+
+const includes = _.pathIncludes(`
+C:/Apps/MPC
+C:/red
+`);
+const excludes = !_.pathIncludes(`
+.part
+`);
 
 main().catch(console.error).then((() => console.log('done')));
 
@@ -19,8 +27,8 @@ async function main() {
     const log = (...msg) => console.log(item, ...msg);
     log.error = (...msg) => console.error('[error]', item, ...msg);
     // log('initializing');
-    while (ctr > MAX_CONCURRENT) {
-      log('awaiting', { ctr });
+    while (ctr >= MAX_CONCURRENT) {
+      // log('awaiting', { ctr });
       await new Promise(_ => setTimeout(_, 1000));
     }
     ctr++;
@@ -32,7 +40,7 @@ async function main() {
         return;
       }
 
-      shouldProcess = !exclude(item);
+      shouldProcess = includes(item);
 
       if (!shouldProcess) {
         // log('Not processing');
@@ -42,6 +50,10 @@ async function main() {
 
       }
       if (!stat.isFile()) {
+        // log('Not a file');
+        return;
+      }
+      if (lstat.isSymbolicLink()) {
         // log('Not a file');
         return;
       }
@@ -56,7 +68,7 @@ async function main() {
         // await mkdirp(Path.dirname(dest));
       }
 
-      log('copying');
+      // log('copying');
 
       if (destStat) {
         if (!(stat.mtime - destStat.mtime)) {
@@ -67,11 +79,22 @@ async function main() {
         }
       }
 
-      // log('copying');
-      // await mkdirp(Path.dirname(dest));
-      // await rimraf(dest);
-      // await fs.copyFile(src, dest);
+      log('copying');
+      await mkdirp(Path.dirname(dest));
+      await rimraf(dest);
+      await fs.copyFile(src, dest);
       log('copied');
+
+
+      if (_.pathIncludes(`
+        C:/red
+      `)(src)) {
+        log('linking');
+        await rimraf(src);
+        await fs.symlink(dest, src);
+        log('linked');
+      }
+
 
     })().catch(error => console.error('error', error.message));
     ctr--;
