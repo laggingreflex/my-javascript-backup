@@ -5,8 +5,11 @@ const Path = require('path');
 const readdirpAsync = require('readdirp-async');
 const mkdirp = require('mkdirp-promise');
 const rimraf = require('rimraf-promise');
+const debug = require('debug-any-level');
 const _ = require('./utils');
-const exclude = require('./exclude');
+
+// debug.enable('*');
+debug.enable('main,info,error');
 
 const root = 'C:/';
 
@@ -31,20 +34,20 @@ const excludes = _.pathMatches({
 const listAwait = _.getCtrAwaiter(1000 /* MAX_CONCURRENT_LIST */ );
 const copyAwait = _.getCtrAwaiter(30 /* MAX_CONCURRENT_COPY */ );
 
-main().catch(console.error).then((() => console.log('done')));
+debug.main('starting');
+main().catch(console.error).then((() => debug.main('finished')));
 
 async function main() {
 
   return readdirpAsync(root, async(error, item, stat, lstat) => {
-    const log = (...msg) => console.log(`${item} |>`, ...msg);
-    log.error = (...msg) => console.error('[error]', `${item} |>`, ...(msg[0] && msg[0].message && [msg[0].message] || msg));
-    // log('initializing');
+    const log = new Proxy(debug, { get: (t, level) => (...msg) => debug[level](`${item} |>`, ...msg) });
+    log.verbose('initializing');
 
     let shouldProcess;
 
     await listAwait(async() => {
 
-      // log('checking');
+      log.verbose('checking');
       if (error) {
         log.error(error.message);
         return;
@@ -54,14 +57,14 @@ async function main() {
         && !excludes(item);
 
       if (!shouldProcess) {
-        // log('Not processing');
+        log.verbose('Not processing');
         return;
       } else {
-        // log('processing');
+        log.verbose('processing');
 
       }
       if (!stat.isFile()) {
-        // log('Not a file');
+        log.verbose('Not a file');
         return;
       }
 
@@ -72,39 +75,39 @@ async function main() {
       try {
         destStat = await fs.stat(dest);
       } catch (error) {
-        // log('dest does not exist, creating');
+        log.verbose('dest does not exist, creating');
         // await mkdirp(Path.dirname(dest));
       }
 
       if (lstat.isSymbolicLink()) {
-        // log('SymbolicLink');
+        log.verbose('SymbolicLink');
         const realpath = await fs.realpath(src);
         try {
           await fs.access(realpath);
         } catch (error) {
-          log('orphan SymbolicLink');
+          log.verbose('orphan SymbolicLink');
         }
         return;
       }
 
-      // log('copying');
+      log.verbose('copying');
 
       if (destStat) {
         if (!(stat.mtime - destStat.mtime)) {
-          // log('same mtime', destStat.mtime);
+          log.verbose('same mtime', destStat.mtime);
           return;
         } else {
-          // log('mtime diff', stat.mtime - destStat.mtime);
+          log.verbose('mtime diff', stat.mtime - destStat.mtime);
         }
       }
 
       await copyAwait(async() => {
 
-        // log('copying');
+        log.verbose('copying');
         await mkdirp(Path.dirname(dest));
         await rimraf(dest);
         await fs.copyFile(src, dest);
-        log('copied');
+        log.verbose('copied');
 
 
         if (_.pathIncludes(`
@@ -113,23 +116,14 @@ async function main() {
           `)(src) || _.pathMatches({
             includes: `/.old/`,
           })(src)) {
-          // log('linking');
+          log.verbose('linking');
           await rimraf(src);
           await fs.symlink(dest, src);
-          log('linked');
+          log.verbose('linked');
+          log.info('copied & linked');
+        } else {
+          log.info('copied');
         }
-
-        // if (_.pathIncludes(`
-        //     C:/Users/x/Documents
-        //     `)(src) && _.pathMatches({
-        //     includes: `/.old/`,
-        //   })(src)) {
-        //   log('symlinking .old');
-        //   await rimraf(src);
-        //   await fs.symlink(dest, src);
-        //   log('removed .old');
-        //   // log('linked');
-        // }
 
       }).catch(log.error);
 

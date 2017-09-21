@@ -11,17 +11,9 @@
   "repository": "laggingreflex/my-javascript-backup",
   "dependencies": {
     "debug-any-level": "^0.3.0",
-    "klaw": "^2.1.0",
-    "lodash": "^4.17.4",
-    "matcher": "^1.0.0",
     "mkdirp-promise": "^5.0.1",
     "mz": "^2.7.0",
-    "p-all": "^1.0.0",
-    "pathify-string": "^0.1.0",
-    "readdirp": "^2.1.0",
-    "readdirp-async": "^0.0.0",
-    "recursive-readdir": "^2.2.1",
-    "rimraf-promise": "^2.0.0",
-    "stream-compare": "^1.0.0"
+    "readdirp-async": "^0.1.0",
+    "rimraf-promise": "^2.0.0"
   }
 }
