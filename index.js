@@ -24,6 +24,8 @@ const excludes = _.pathMatches({
   `,
   includes: `
     node_modules
+    /.tmp/
+    /.temp/
   `,
   endsWith: `
     .part
@@ -40,7 +42,11 @@ main().catch(console.error).then((() => debug.main('finished')));
 async function main() {
 
   return readdirpAsync(root, async(error, item, stat, lstat) => {
-    const log = new Proxy(debug, { get: (t, level) => (...msg) => debug[level](`${item} |>`, ...msg) });
+    const log = new Proxy(debug, {
+      get: (t, level) => (...msg) => debug[level](`${item} |>`, ...(
+        msg && msg[0] && msg[0].message && [msg[0].message] || msg
+      ))
+    });
     log.verbose('initializing');
 
     let shouldProcess;
